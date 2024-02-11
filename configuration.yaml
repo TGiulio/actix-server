@@ -1,0 +1,7 @@
+application_port: 8000
+database:
+  host: 'zerotoprod-zerotoprod.a.aivencloud.com'
+  database_name: 'newsletter'
+  username: 'avnadmin'
+  password: 'AVNS_SJ5nnCXzkn7c9BG6yoD'
+  port: 13496
