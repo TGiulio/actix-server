@@ -2,3 +2,4 @@
 *.env
 /scripts
 *.yaml
+.vscode/
