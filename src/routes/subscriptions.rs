@@ -9,15 +9,7 @@ pub struct FormData {
     name: String,
 }
 
-#[tracing::instrument(
-    name = "saving subscriber to the database",
-    skip(form, db_pool)
-    fields (
-        request_id = %Uuid::new_v4(),
-        subscriber_email = %form.email,
-        subscriber_name = %form.name
-    )
-)]
+#[tracing::instrument(name = "saving subscriber to the database", skip(form, db_pool))]
 pub async fn insert_subscriber(form: &FormData, db_pool: &PgPool) -> Result<(), sqlx::Error> {
     sqlx::query!(r#"INSERT into public.subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
@@ -38,7 +30,6 @@ pub async fn insert_subscriber(form: &FormData, db_pool: &PgPool) -> Result<(), 
     name = "Adding new subscriber",
     skip(form, db_pool)
     fields (
-        request_id = %Uuid::new_v4(),
         subscriber_email = %form.email,
         subscriber_name = %form.name
     )
