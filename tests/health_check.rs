@@ -1,10 +1,26 @@
 use actix_server::{
     configuration::{get_configuration, DatabaseSettings},
     startup::run,
+    telemetry::{get_tracing_subscriber, init_tracing_subscriber},
 };
+use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let sub_name = "test_actix_server".to_string();
+    let sub_env_filter = "debug".to_string();
+
+    // use environment variable TEST_LOG = true to display the log messages
+    if std::env::var("TEST_LOG").is_ok() {
+        let tracing_subscriber = get_tracing_subscriber(sub_name, sub_env_filter, std::io::stdout);
+        init_tracing_subscriber(tracing_subscriber);
+    } else {
+        let tracing_subscriber = get_tracing_subscriber(sub_name, sub_env_filter, std::io::sink);
+        init_tracing_subscriber(tracing_subscriber);
+    }
+});
 
 pub struct TestApp {
     pub address: String,
@@ -57,6 +73,11 @@ async fn configure_test_database(db_conf: &DatabaseSettings) -> PgPool {
 }
 
 async fn spawn_app() -> TestApp {
+    // LOG INITIALIZATION
+    // use environment variable TEST_LOG = true to display the log messages
+    Lazy::force(&TRACING);
+    // END LOG INITIALIZATION
+
     let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind random port");
     let port = listener.local_addr().unwrap().port();
     //get configuration
