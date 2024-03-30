@@ -4,6 +4,7 @@ use actix_server::{
     telemetry::{get_tracing_subscriber, init_tracing_subscriber},
 };
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
 use uuid::Uuid;
@@ -50,9 +51,13 @@ async fn health_check_works() {
 
 async fn configure_test_database(db_conf: &DatabaseSettings) -> PgPool {
     // connect to the database
-    let mut connection = PgConnection::connect(&db_conf.connection_string_without_db("require"))
-        .await
-        .expect("failed to connect to the database");
+    let mut connection = PgConnection::connect(
+        &db_conf
+            .connection_string_without_db("require")
+            .expose_secret(),
+    )
+    .await
+    .expect("failed to connect to the database");
 
     // create the database to use
     connection
@@ -61,7 +66,7 @@ async fn configure_test_database(db_conf: &DatabaseSettings) -> PgPool {
         .expect("failed to create database");
 
     //create the pool and execute migrations
-    let db_pool = PgPool::connect(&db_conf.connection_string("require"))
+    let db_pool = PgPool::connect(&db_conf.connection_string("require").expose_secret())
         .await
         .expect("failed to connect to the newly created database");
     //
