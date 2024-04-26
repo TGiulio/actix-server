@@ -1,5 +1,9 @@
 use config::Config;
 use secrecy::{ExposeSecret, Secret};
+use sqlx::{
+    postgres::{PgConnectOptions, PgSslMode},
+    ConnectOptions,
+};
 
 #[derive(serde::Deserialize)]
 pub struct Settings {
@@ -9,11 +13,12 @@ pub struct Settings {
 
 #[derive(serde::Deserialize)]
 pub struct DatabaseSettings {
-    host: String,
-    username: String,
+    pub host: String,
+    pub username: String,
     pub database_name: String,
     pub password: Secret<String>,
-    port: u16,
+    pub port: u16,
+    pub require_ssl: bool,
 }
 
 #[derive(serde::Deserialize)]
@@ -49,27 +54,26 @@ impl TryFrom<String> for Environment {
 }
 
 impl DatabaseSettings {
-    pub fn connection_string(&self, sslmode: &str) -> Secret<String> {
-        Secret::new(format!(
-            "postgres://{}:{}@{}:{}/{}?sslmode={}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            self.database_name,
-            sslmode
-        ))
+    pub fn without_db(&self) -> PgConnectOptions {
+        let ssl_mode = if self.require_ssl {
+            PgSslMode::Require
+        } else {
+            PgSslMode::Prefer
+        };
+
+        PgConnectOptions::new()
+            .host(&self.host)
+            .username(&self.username)
+            .password(&self.password.expose_secret())
+            .port(self.port)
+            .database("postgres")
+            .ssl_mode(ssl_mode)
     }
 
-    pub fn connection_string_without_db(&self, sslmode: &str) -> Secret<String> {
-        Secret::new(format!(
-            "postgres://{}:{}@{}:{}/postgres?sslmode={}",
-            self.username,
-            self.password.expose_secret(),
-            self.host,
-            self.port,
-            sslmode
-        ))
+    pub fn with_db(&self) -> PgConnectOptions {
+        let mut options = self.without_db().database(&self.database_name);
+        options.log_statements(tracing::log::LevelFilter::Trace);
+        options
     }
 }
 
@@ -94,6 +98,7 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         .add_source(config::File::from(
             configuration_dir.join(environment.as_str()),
         ))
+        .add_source(config::Environment::with_prefix("app").separator("__"))
         .build()
         .unwrap();
 
