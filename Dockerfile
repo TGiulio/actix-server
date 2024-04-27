@@ -23,7 +23,7 @@ RUN apt-get update -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/actix_server actix_server
-COPY configuration configuration
+COPY ./configuration configuration
 
 ENV APP_ENVIRONMENT production
 
