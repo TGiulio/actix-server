@@ -136,8 +136,40 @@ async fn subscribe_returns_400_for_missing_form_data() {
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=Alpha%20Centauri", "missing email"),
-        ("name=alphacentauri%40smail.com", "missing name"),
+        ("email=alphacentauri%40smail.com", "missing name"),
         ("", "missing both name and email"),
+    ];
+
+    for (invalid_body, error_message) in test_cases {
+        let response = client
+            .post(&format!("{}/subscriptions", address))
+            .header("Content-Type", "Application/x-www-form-urlencoded")
+            .body(invalid_body)
+            .send()
+            .await
+            .expect("couldn't send the request.");
+
+        assert_eq!(
+            response.status().as_u16(),
+            400,
+            "Tha API did not fail with 400 code when the body was {}",
+            error_message
+        );
+    }
+}
+#[tokio::test]
+async fn subscribe_returns_400_when_fields_are_present_but_invalid() {
+    // prepare what's needed
+    let test_app = spawn_app().await;
+    let address = test_app.address;
+    let client = reqwest::Client::new();
+    let test_cases = vec![
+        ("name=&email=alphacentauri%40smail.com", "empty name"),
+        ("name=Alpha%20Centauri&email", "empty email"),
+        (
+            "name=Alpha%20Centauri&email=certainly-not-an-email",
+            "invalid email",
+        ),
     ];
 
     for (invalid_body, error_message) in test_cases {
