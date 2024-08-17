@@ -11,6 +11,7 @@
       buildInputs = [
         pkgs.rustc
         pkgs.cargo
+        pkgs.sqlx-cli
         pkgs.openssl
         pkgs.pkg-config
       ];
