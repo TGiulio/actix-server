@@ -1,14 +1,73 @@
+use crate::configuration::{DatabaseSettings, Settings};
+use crate::email_client::{self, EmailClient};
 use crate::routes::{health_check, subscribe};
 use actix_web::dev::Server;
-use actix_web::{web, App, HttpServer};
+use actix_web::{web, App, HttpServer, Result};
+use sqlx::postgres::PgPoolOptions;
 use sqlx::PgPool;
 use std::net::TcpListener;
 use tracing_actix_web::TracingLogger;
 
-pub fn run(listener: TcpListener, db_connection_pool: PgPool) -> Result<Server, std::io::Error> {
+pub struct Application {
+    port: u16,
+    server: Server,
+}
+
+impl Application {
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub async fn build(configuration: Settings) -> Result<Application, std::io::Error> {
+        // get database connection
+        let db_connection_pool = get_connection_pool(&configuration.database).await;
+        // set the address
+        let sender_email_address = configuration
+            .email_client
+            .sender()
+            .expect("invalid sender email for email client");
+        let client_timeout = configuration.email_client.timeout();
+        let email_client = EmailClient::new(
+            configuration.email_client.base_url,
+            sender_email_address,
+            configuration.email_client.authorization_token,
+            client_timeout,
+        );
+        let address = format!(
+            "{}:{}",
+            configuration.application.host, configuration.application.port
+        );
+
+        // start listener
+        let listener = TcpListener::bind(address)?;
+        let port = listener.local_addr().unwrap().port();
+        let server = run(listener, db_connection_pool, email_client)?;
+
+        Ok(Self { port, server })
+    }
+
+    pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
+        self.server.await
+    }
+}
+
+pub async fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
+    PgPoolOptions::new()
+        .connect_timeout(std::time::Duration::from_secs(2))
+        .connect_with(configuration.with_db())
+        .await
+        .expect("couldn't connect to the database")
+}
+
+pub fn run(
+    listener: TcpListener,
+    db_connection_pool: PgPool,
+    email_client: EmailClient,
+) -> Result<Server, std::io::Error> {
     // wrap the connection into an Arc (smart pointer) so we can clone it inside the closure
     //web::Data is another extractor that returns an Arc
     let db_pool = web::Data::new(db_connection_pool);
+    let email_client = web::Data::new(email_client);
 
     let server = HttpServer::new(move || {
         App::new()
@@ -16,6 +75,7 @@ pub fn run(listener: TcpListener, db_connection_pool: PgPool) -> Result<Server, 
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             .app_data(db_pool.clone())
+            .app_data(email_client.clone())
     })
     .listen(listener)?
     .run();
