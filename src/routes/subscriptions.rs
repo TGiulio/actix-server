@@ -15,7 +15,7 @@ pub async fn insert_subscriber(
     new_sub: &NewSubscriber,
     db_pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
-    sqlx::query!(r#"INSERT into public.subscriptions (id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)"#,
+    sqlx::query!(r#"INSERT into public.subscriptions (id, email, name, subscribed_at, status) VALUES ($1, $2, $3, $4, 'confirmed')"#,
         Uuid::new_v4(),
         new_sub.email.as_ref(),
         new_sub.name.as_ref(),
