@@ -49,6 +49,7 @@ pub struct ApplicationSettings {
     pub host: String,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
+    pub base_url: String,
 }
 
 pub enum Environment {
@@ -92,6 +93,7 @@ impl DatabaseSettings {
             .port(self.port)
             .database("postgres")
             .ssl_mode(ssl_mode)
+        // .options([("idle_in_transaction_session_timeout", "65ms")])
     }
 
     pub fn with_db(&self) -> PgConnectOptions {
