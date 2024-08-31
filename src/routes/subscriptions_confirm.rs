@@ -14,16 +14,16 @@ pub async fn confirm(
 ) -> impl Responder {
     let id = match get_subscriber_id_from_token(&db_pool, &parameters.subscription_token).await {
         Ok(id) => id,
-        Err(_) => return HttpResponse::InternalServerError(),
+        Err(_) => return HttpResponse::InternalServerError().finish(),
     };
 
     match id {
-        None => HttpResponse::Unauthorized(),
+        None => HttpResponse::Unauthorized().finish(),
         Some(id) => {
             if confirm_subscriber(id, &db_pool).await.is_err() {
-                return HttpResponse::InternalServerError();
+                return HttpResponse::InternalServerError().finish();
             }
-            HttpResponse::Ok()
+            HttpResponse::Ok().body("Grazie per aver confermato!")
         }
     }
 }
