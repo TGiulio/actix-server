@@ -60,14 +60,19 @@ pub async fn send_confirmation_email(
         "{}/subscriptions/confirm?subscription_token={}",
         base_url, subscription_token
     );
-    let html_body = format!("Welcome to our newsletter!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription.", confirmation_link);
+    let html_body = format!("Welcome to our mailing list!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!", confirmation_link);
     let plain_body = format!(
-        "Welcome to our newsletter! Please, visit this link: {} to confirm your subscription.",
+        "Welcome to our mailing list! Please, visit this link: {} to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!",
         confirmation_link
     );
 
     email_client
-        .send_email(new_sub.email, "Welcome!", &html_body, &plain_body)
+        .send_email(
+            new_sub.email,
+            "Welcome to decisionFlow!",
+            &html_body,
+            &plain_body,
+        )
         .await
 }
 
