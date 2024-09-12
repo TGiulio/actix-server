@@ -26,13 +26,13 @@ pub async fn insert_subscriber(
         new_sub.email.as_ref(),
         new_sub.name.as_ref(),
         Utc::now()
-     )
+    )
     .execute(transaction)
     .await
-        .map_err(|e| {
-            tracing::error!("Failed to execute query: {:?}", e);
-            e
-        })?;
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
     Ok(subscriber_id)
 }
 
@@ -85,6 +85,24 @@ pub async fn subscribe(
     email_client: web::Data<EmailClient>,
     base_url: web::Data<ApplicationBaseUrl>,
 ) -> impl Responder {
+    // checking of subscriber existance
+    match subscriber_existance_check(&form.0.email, &db_pool).await {
+        Ok(option) => {
+            if let Some((existing_sub, token)) = option {
+                if send_confirmation_email(&email_client, existing_sub, &base_url.0, &token)
+                    .await
+                    .is_err()
+                {
+                    return HttpResponse::InternalServerError();
+                } else {
+                    return HttpResponse::Ok();
+                }
+            }
+        }
+        Err(_) => return HttpResponse::BadRequest(),
+    }
+
+    // if the subscriber is new
     let new_sub = match form.0.try_into() {
         Ok(new_sub) => new_sub,
         Err(_) => return HttpResponse::BadRequest(),
@@ -149,4 +167,31 @@ fn generate_subscription_token() -> String {
         .map(char::from)
         .take(25)
         .collect()
+}
+
+async fn subscriber_existance_check(
+    email: &str,
+    db_pool: &PgPool,
+) -> Result<Option<(NewSubscriber, String)>, sqlx::Error> {
+    let saved = sqlx::query!(
+        r#"SELECT name, email, subscription_token FROM public.subscriptions JOIN public.subscription_tokens ON id = subscriber_id WHERE email = $1"#,
+        email
+    )
+    .fetch_optional(db_pool)
+    .await
+    .map_err(|e| {
+        tracing::error!("Failed to execute sub check query: {:?}", e);
+        e
+    })?;
+    match saved {
+        None => Ok(None),
+        Some(subscriber) => {
+            let token = subscriber.subscription_token.to_string();
+            let existing_sub = NewSubscriber {
+                name: SubscriberName::parse(subscriber.name).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
+                email: SubscriberEmail::parse(subscriber.email).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
+            };
+            Ok(Some((existing_sub, token)))
+        }
+    }
 }
