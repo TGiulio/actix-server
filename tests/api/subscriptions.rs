@@ -129,3 +129,19 @@ async fn subscribe_returns_400_when_fields_are_present_but_invalid() {
         );
     }
 }
+
+#[tokio::test]
+async fn subscribe_resends_confirmation_email_for_duplicate_email() {
+    let test_app = spawn_app().await;
+    let body = "name=Alpha%20Centauri&email=alphacentauri%40smail.com";
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(2)
+        .mount(&test_app.email_server)
+        .await;
+
+    test_app.post_subscriptions(body.into()).await;
+    test_app.post_subscriptions(body.into()).await;
+}
