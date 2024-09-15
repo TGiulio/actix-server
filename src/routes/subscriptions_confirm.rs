@@ -40,7 +40,7 @@ pub async fn get_subscriber_id_from_token(
     .fetch_optional(db_pool)
     .await
     .map_err(|e| {
-        tracing::error!("Failed to executo query: {:?}", e);
+        tracing::error!("Failed to execute subscriber retreiving query: {:?}", e);
         e
     })?;
     Ok(result.map(|r| r.subscriber_id))
