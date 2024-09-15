@@ -1,5 +1,5 @@
 use crate::{
-    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName, SubscriptionToken},
     email_client::{self, EmailClient},
     startup::ApplicationBaseUrl,
 };
@@ -54,11 +54,12 @@ pub async fn send_confirmation_email(
     email_client: &EmailClient,
     new_sub: NewSubscriber,
     base_url: &str,
-    subscription_token: &str,
+    subscription_token: &SubscriptionToken,
 ) -> Result<(), reqwest::Error> {
     let confirmation_link = &format!(
         "{}/subscriptions/confirm?subscription_token={}",
-        base_url, subscription_token
+        base_url,
+        subscription_token.as_ref()
     );
     let html_body = format!("Welcome to our mailing list!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!", confirmation_link);
     let plain_body = format!(
@@ -122,7 +123,7 @@ pub async fn subscribe(
         Err(_) => return HttpResponse::InternalServerError(),
     };
 
-    let subscription_token = generate_subscription_token();
+    let subscription_token = SubscriptionToken::new();
     if store_token(subscriber_id, &subscription_token, &mut sql_transaction)
         .await
         .is_err()
@@ -150,12 +151,12 @@ pub async fn subscribe(
 )]
 pub async fn store_token(
     subscriber_id: Uuid,
-    token: &str,
+    token: &SubscriptionToken,
     transaction: &mut sqlx::Transaction<'_, Postgres>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(r#"INSERT into public.subscription_tokens (subscriber_id, subscription_token) VALUES ($1, $2)"#,
         subscriber_id,
-        token
+        token.as_ref()
      )
     .execute(transaction)
     .await
@@ -166,18 +167,10 @@ pub async fn store_token(
     Ok(())
 }
 
-fn generate_subscription_token() -> String {
-    let mut rng = thread_rng();
-    std::iter::repeat_with(|| rng.sample(Alphanumeric))
-        .map(char::from)
-        .take(25)
-        .collect()
-}
-
 async fn subscriber_existance_check(
     email: &str,
     db_pool: &PgPool,
-) -> Result<Option<(NewSubscriber, String)>, sqlx::Error> {
+) -> Result<Option<(NewSubscriber, SubscriptionToken)>, sqlx::Error> {
     let saved = sqlx::query!(
         r#"SELECT name, email, subscription_token FROM public.subscriptions JOIN public.subscription_tokens ON id = subscriber_id WHERE email = $1"#,
         email
@@ -191,7 +184,8 @@ async fn subscriber_existance_check(
     match saved {
         None => Ok(None),
         Some(subscriber) => {
-            let token = subscriber.subscription_token.to_string();
+            let token =
+                SubscriptionToken::parse(subscriber.subscription_token.to_string()).unwrap(); // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
             let existing_sub = NewSubscriber {
                 name: SubscriberName::parse(subscriber.name).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
                 email: SubscriberEmail::parse(subscriber.email).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
