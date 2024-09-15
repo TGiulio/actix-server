@@ -1,5 +1,4 @@
 use crate::domain::SubscriberEmail;
-use crate::email_client::EmailClient;
 use config::Config;
 use secrecy::{ExposeSecret, Secret};
 use serde_aux::field_attributes::deserialize_number_from_string;

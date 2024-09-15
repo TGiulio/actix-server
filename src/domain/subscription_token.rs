@@ -1,4 +1,4 @@
-use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use regex::Regex;
 
 const TOKEN_LENGTH: usize = 25;
@@ -39,12 +39,8 @@ impl AsRef<str> for SubscriptionToken {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::subscription_token::{SubscriptionToken, TOKEN_LENGTH};
+    use crate::domain::subscription_token::SubscriptionToken;
     use claim::assert_err;
-    use rand::{
-        distributions::{Alphanumeric, DistString},
-        RngCore,
-    };
 
     #[test]
     fn empty_token_is_rejected() {
@@ -70,8 +66,9 @@ mod tests {
         assert_err!(SubscriptionToken::parse(token));
     }
 
+    #[test]
     fn valid_token_are_parsed_succesfully() {
-        for i in (0..100) {
+        for _ in 0..100 {
             let valid_token = SubscriptionToken::new_token_string();
             let _ = SubscriptionToken::parse(valid_token).is_ok();
         }

@@ -1,9 +1,6 @@
 use actix_server::configuration::get_configuration;
-use actix_server::email_client::{self, EmailClient};
 use actix_server::startup::Application;
 use actix_server::telemetry::{get_tracing_subscriber, init_tracing_subscriber};
-use sqlx::postgres::PgPoolOptions;
-use std::net::TcpListener;
 
 #[tokio::main]
 pub async fn main() -> std::io::Result<()> {
