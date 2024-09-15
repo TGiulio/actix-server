@@ -40,7 +40,7 @@ impl EmailClient {
             html_body: html_content,
             text_body: text_content,
         };
-        let builder = self
+        let _builder = self
             .http_client
             .post(&url)
             .header(
@@ -68,10 +68,9 @@ struct SendEmailRequest<'a> {
 #[cfg(test)]
 mod test {
     use crate::domain::SubscriberEmail;
-    use crate::email_client;
     use claim::{assert_err, assert_ok};
     use fake::faker::internet::en::SafeEmail;
-    use fake::faker::lorem::en::{Paragraph, Sentence};
+    use fake::faker::lorem::en::Sentence;
     use fake::{Fake, Faker};
     use secrecy::Secret;
     use wiremock::matchers::{any, header, header_exists, method, path};

@@ -1,11 +1,10 @@
 use crate::{
     domain::{NewSubscriber, SubscriberEmail, SubscriberName, SubscriptionToken},
-    email_client::{self, EmailClient},
+    email_client::EmailClient,
     startup::ApplicationBaseUrl,
 };
 use actix_web::{web, HttpResponse, Responder, Result};
 use chrono::Utc;
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use sqlx::{PgPool, Postgres};
 use uuid::Uuid;
 
@@ -185,10 +184,10 @@ async fn subscriber_existance_check(
         None => Ok(None),
         Some(subscriber) => {
             let token =
-                SubscriptionToken::parse(subscriber.subscription_token.to_string()).unwrap(); // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
+                SubscriptionToken::parse(subscriber.subscription_token.to_string()).unwrap(); // FIXME: this can be dangerous but it comes from the database so it must have passed this check during the insert operation
             let existing_sub = NewSubscriber {
-                name: SubscriberName::parse(subscriber.name).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
-                email: SubscriberEmail::parse(subscriber.email).unwrap(), // this can be dangerous but it comes from the database so it must have passed this check during the insert operation
+                name: SubscriberName::parse(subscriber.name).unwrap(), // FIXME: this can be dangerous but it comes from the database so it must have passed this check during the insert operation
+                email: SubscriberEmail::parse(subscriber.email).unwrap(), // FIXME: this can be dangerous but it comes from the database so it must have passed this check during the insert operation
             };
             Ok(Some((existing_sub, token)))
         }

@@ -1,5 +1,4 @@
 use crate::helpers::spawn_app;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
@@ -7,7 +6,6 @@ use wiremock::{Mock, ResponseTemplate};
 async fn subscribe_returns_200_for_valid_form_data() {
     // prepare what's needed
     let test_app = spawn_app().await;
-    let db_pool = &test_app.db_pool;
     let body = "name=Alpha%20Centauri&email=alphacentauri%40smail.com";
 
     Mock::given(path("/email"))
@@ -37,7 +35,7 @@ async fn subscribe_persists_the_new_subscriber() {
 
     // make the request
     let body = "name=Alpha%20Centauri&email=alphacentauri%40smail.com";
-    let response = test_app.post_subscriptions(body.into()).await;
+    let _response = test_app.post_subscriptions(body.into()).await;
 
     let saved = sqlx::query!("SELECT email, name, status FROM public.subscriptions")
         .fetch_one(db_pool)

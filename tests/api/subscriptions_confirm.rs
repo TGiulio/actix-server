@@ -1,6 +1,4 @@
 use crate::helpers::spawn_app;
-use actix_web::test;
-use reqwest::Url;
 use wiremock::matchers::{method, path};
 use wiremock::{Mock, ResponseTemplate};
 
