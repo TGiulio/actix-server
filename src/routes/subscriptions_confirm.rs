@@ -1,4 +1,6 @@
-use actix_web::{web, HttpResponse, Responder, Result};
+use crate::errors::ConfirmError;
+use actix_web::{web, HttpResponse, Result};
+use anyhow::Context;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -11,19 +13,20 @@ pub struct Parameters {
 pub async fn confirm(
     parameters: web::Query<Parameters>,
     db_pool: web::Data<PgPool>,
-) -> impl Responder {
-    let id = match get_subscriber_id_from_token(&db_pool, &parameters.subscription_token).await {
-        Ok(id) => id,
-        Err(_) => return HttpResponse::InternalServerError().finish(),
-    };
+) -> Result<HttpResponse, ConfirmError> {
+    let id = get_subscriber_id_from_token(&db_pool, &parameters.subscription_token)
+        .await
+        .context("failed to retrieve confirming subscriber")?;
 
     match id {
-        None => HttpResponse::Unauthorized().finish(),
+        None => Err(ConfirmError::UnauthorizedError(
+            "The token received does not correspond to any user id".into(),
+        )),
         Some(id) => {
-            if confirm_subscriber(id, &db_pool).await.is_err() {
-                return HttpResponse::InternalServerError().finish();
-            }
-            HttpResponse::Ok().body("Grazie per aver confermato!")
+            confirm_subscriber(id, &db_pool)
+                .await
+                .context("failed to confirm subscriber")?;
+            Ok(HttpResponse::Ok().body("Grazie per aver confermato!"))
         }
     }
 }
@@ -38,11 +41,7 @@ pub async fn get_subscriber_id_from_token(
         token
     )
     .fetch_optional(db_pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute subscriber retreiving query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(result.map(|r| r.subscriber_id))
 }
 
@@ -53,10 +52,6 @@ pub async fn confirm_subscriber(subscriber_id: Uuid, db_pool: &PgPool) -> Result
         subscriber_id
     )
     .execute(db_pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(())
 }
