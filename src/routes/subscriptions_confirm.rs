@@ -1,4 +1,4 @@
-use crate::errors::ConfirmError;
+use crate::{domain::SubscriptionToken, errors::ConfirmError};
 use actix_web::{web, HttpResponse, Result};
 use anyhow::Context;
 use sqlx::PgPool;
@@ -14,7 +14,9 @@ pub async fn confirm(
     parameters: web::Query<Parameters>,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, ConfirmError> {
-    let id = get_subscriber_id_from_token(&db_pool, &parameters.subscription_token)
+    let token = SubscriptionToken::parse(parameters.subscription_token.to_owned())
+        .map_err(|e| ConfirmError::ValidationError(e))?;
+    let id = get_subscriber_id_from_token(&db_pool, token)
         .await
         .context("failed to retrieve confirming subscriber")?;
 
@@ -34,11 +36,11 @@ pub async fn confirm(
 #[tracing::instrument(name = "get subscriber id from token", skip(token, db_pool))]
 pub async fn get_subscriber_id_from_token(
     db_pool: &PgPool,
-    token: &str,
+    token: SubscriptionToken,
 ) -> Result<Option<Uuid>, sqlx::Error> {
     let result = sqlx::query!(
         r#"SELECT subscriber_id from subscription_tokens WHERE subscription_token = $1"#,
-        token
+        token.as_ref()
     )
     .fetch_optional(db_pool)
     .await?;

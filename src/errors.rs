@@ -156,6 +156,8 @@ impl std::error::Error for UnauthorizedConfirmationError {
 pub enum ConfirmError {
     #[error("{0}")]
     UnauthorizedError(String),
+    #[error("{0}")]
+    ValidationError(String),
     #[error(transparent)]
     UnexpectedError(#[from] anyhow::Error),
 }
@@ -169,6 +171,7 @@ impl std::fmt::Debug for ConfirmError {
 impl ResponseError for ConfirmError {
     fn status_code(&self) -> StatusCode {
         match self {
+            ConfirmError::ValidationError(_) => StatusCode::BAD_REQUEST,
             ConfirmError::UnauthorizedError(_) => StatusCode::UNAUTHORIZED,
             ConfirmError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
