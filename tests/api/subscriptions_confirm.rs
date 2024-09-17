@@ -13,6 +13,21 @@ async fn confirmations_without_token_are_rejected_with_400() {
 
     assert_eq!(response.status().as_u16(), 400);
 }
+
+#[tokio::test]
+async fn confirmations_with_invalid_token_are_rejected_with_400() {
+    // prepare what's needed
+    let test_app = spawn_app().await;
+
+    let response = reqwest::get(&format!(
+        "{}/subscriptions/confirm?subscription_token=KYu7R2TPDCAy1rT141uOExlVVf", //invalid token
+        test_app.address
+    ))
+    .await
+    .unwrap();
+
+    assert_eq!(response.status().as_u16(), 400);
+}
 #[tokio::test]
 async fn the_link_returned_by_subscribe_returns_a_200_if_called() {
     // prepare what's needed
