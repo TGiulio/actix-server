@@ -5,18 +5,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
-pub struct Parameters {
+pub struct ConfirmationParameters {
     subscription_token: String,
 }
 
 #[tracing::instrument(name = "confirm pending subscriber", skip(parameters, db_pool))]
 pub async fn confirm(
-    parameters: web::Query<Parameters>,
+    parameters: web::Query<ConfirmationParameters>,
     db_pool: web::Data<PgPool>,
 ) -> Result<HttpResponse, ConfirmError> {
     let token = SubscriptionToken::parse(parameters.subscription_token.to_owned())
         .map_err(|e| ConfirmError::ValidationError(e))?;
-    let id = get_subscriber_id_from_token(&db_pool, token)
+    let id = SubscriptionToken::get_subscriber_id_from_token(&db_pool, token)
         .await
         .context("failed to retrieve confirming subscriber")?;
 
@@ -31,20 +31,6 @@ pub async fn confirm(
             Ok(HttpResponse::Ok().body("Grazie per aver confermato!"))
         }
     }
-}
-
-#[tracing::instrument(name = "get subscriber id from token", skip(token, db_pool))]
-pub async fn get_subscriber_id_from_token(
-    db_pool: &PgPool,
-    token: SubscriptionToken,
-) -> Result<Option<Uuid>, sqlx::Error> {
-    let result = sqlx::query!(
-        r#"SELECT subscriber_id from subscription_tokens WHERE subscription_token = $1"#,
-        token.as_ref()
-    )
-    .fetch_optional(db_pool)
-    .await?;
-    Ok(result.map(|r| r.subscriber_id))
 }
 
 #[tracing::instrument(name = "update subscriber status", skip(subscriber_id, db_pool))]

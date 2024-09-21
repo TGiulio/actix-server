@@ -58,16 +58,21 @@ pub async fn send_confirmation_email(
         base_url,
         subscription_token.as_ref()
     );
-    let html_body = format!("Welcome to our mailing list!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!", confirmation_link);
+    let revocation_link = &format!(
+        "{}/subscriptions/revoke?subscription_token={}",
+        base_url,
+        subscription_token.as_ref()
+    );
+    let html_body = format!("Welcome to our mailing list!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!<br /><br />You can unsubscribe at any moment clicking <a href=\"{}\">here</a>", confirmation_link, revocation_link);
     let plain_body = format!(
-        "Welcome to our mailing list! Please, visit this link: {} to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!",
-        confirmation_link
+        "Welcome to our mailing list! Please, visit this link: {} to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app! \r\r You can unsubscribe at any time visiting this link instead: {}",
+        confirmation_link, revocation_link
     );
 
     email_client
         .send_email(
             new_sub.email,
-            "Welcome to decisionFlow!",
+            "Welcome to DecisionFlow!",
             &html_body,
             &plain_body,
         )
@@ -105,7 +110,7 @@ pub async fn subscribe(
     let mut sql_transaction = db_pool
         .begin()
         .await
-        .context("Failed to get Postrges connection from the pool")?;
+        .context("Failed to get Postgres connection from the pool")?;
 
     let subscriber_id = insert_subscriber(&new_sub, &mut sql_transaction)
         .await
@@ -119,7 +124,7 @@ pub async fn subscribe(
     sql_transaction
         .commit()
         .await
-        .context("Failed to commit SQL transaction")?;
+        .context("Failed to commit subscription SQL transaction")?;
 
     send_confirmation_email(&email_client, new_sub, &base_url.0, &subscription_token)
         .await

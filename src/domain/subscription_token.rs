@@ -1,5 +1,7 @@
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use regex::Regex;
+use sqlx::PgPool;
+use uuid::Uuid;
 
 const TOKEN_LENGTH: usize = 25;
 
@@ -28,6 +30,20 @@ impl SubscriptionToken {
     pub fn new() -> Self {
         let token = Self::new_token_string();
         SubscriptionToken::parse(token).unwrap() // it should always be parsed correctly
+    }
+
+    #[tracing::instrument(name = "get subscriber id from token", skip(token, db_pool))]
+    pub async fn get_subscriber_id_from_token(
+        db_pool: &PgPool,
+        token: Self,
+    ) -> Result<Option<Uuid>, sqlx::Error> {
+        let result = sqlx::query!(
+            r#"SELECT subscriber_id from subscription_tokens WHERE subscription_token = $1"#,
+            token.as_ref()
+        )
+        .fetch_optional(db_pool)
+        .await?;
+        Ok(result.map(|r| r.subscriber_id))
     }
 }
 

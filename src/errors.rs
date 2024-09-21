@@ -84,74 +84,6 @@ impl ResponseError for SubscribeError {
 
 // confirmation errors ------------------------------------------------------------
 
-pub struct SubscriberRetrieveError(sqlx::Error);
-
-impl std::fmt::Display for SubscriberRetrieveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "a database error was encountered while \
-            trying to retrieve confirming subscriber."
-        )
-    }
-}
-
-impl std::fmt::Debug for SubscriberRetrieveError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
-    }
-}
-
-impl std::error::Error for SubscriberRetrieveError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
-    }
-}
-
-pub struct SubscriberConfirmationError(pub sqlx::Error);
-
-impl std::fmt::Display for SubscriberConfirmationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "a database error was encountered while \
-            trying to confirm a subscriber."
-        )
-    }
-}
-
-impl std::fmt::Debug for SubscriberConfirmationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
-    }
-}
-
-impl std::error::Error for SubscriberConfirmationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
-    }
-}
-
-pub struct UnauthorizedConfirmationError(pub sqlx::Error);
-
-impl std::fmt::Display for UnauthorizedConfirmationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "no id was found for confirming subscriber.")
-    }
-}
-
-impl std::fmt::Debug for UnauthorizedConfirmationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        error_chain_fmt(self, f)
-    }
-}
-
-impl std::error::Error for UnauthorizedConfirmationError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        Some(&self.0)
-    }
-}
-
 #[derive(thiserror::Error)]
 pub enum ConfirmError {
     #[error("{0}")]
@@ -174,6 +106,57 @@ impl ResponseError for ConfirmError {
             ConfirmError::ValidationError(_) => StatusCode::BAD_REQUEST,
             ConfirmError::UnauthorizedError(_) => StatusCode::UNAUTHORIZED,
             ConfirmError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+// revocation errors ----------------------------------------------------------------------
+
+pub struct SubcriberDeletionError(pub sqlx::Error);
+
+impl std::fmt::Display for SubcriberDeletionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "a database error was encountered while \
+            deleting subscriber."
+        )
+    }
+}
+
+impl std::fmt::Debug for SubcriberDeletionError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl std::error::Error for SubcriberDeletionError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.0)
+    }
+}
+
+#[derive(thiserror::Error)]
+pub enum RevokeError {
+    #[error("{0}")]
+    UnauthorizedError(String),
+    #[error("{0}")]
+    ValidationError(String),
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+}
+
+impl std::fmt::Debug for RevokeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl ResponseError for RevokeError {
+    fn status_code(&self) -> StatusCode {
+        match self {
+            RevokeError::ValidationError(_) => StatusCode::BAD_REQUEST,
+            RevokeError::UnauthorizedError(_) => StatusCode::UNAUTHORIZED,
+            RevokeError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }

@@ -35,6 +35,11 @@ pub struct ConfirmationLinks {
     pub plain_text: reqwest::Url,
 }
 
+pub struct RevocationLinks {
+    pub html: reqwest::Url,
+    pub plain_text: reqwest::Url,
+}
+
 impl TestApp {
     pub async fn post_subscriptions(&self, body: String) -> reqwest::Response {
         reqwest::Client::new()
@@ -55,7 +60,7 @@ impl TestApp {
                 .links(s)
                 .filter(|l| *l.kind() == linkify::LinkKind::Url)
                 .collect();
-            assert_eq!(links.len(), 1);
+            assert_eq!(links.len(), 2); // confirmation and revocation link!
             let raw_link = links[0].as_str().to_owned();
             let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
             // check that we don't call someone else's API
@@ -69,6 +74,31 @@ impl TestApp {
         let plain_text = get_link(&request_body["TextBody"].as_str().unwrap());
 
         ConfirmationLinks { html, plain_text }
+    }
+
+    pub fn get_revocation_links(&self, email_request: &wiremock::Request) -> RevocationLinks {
+        let request_body: serde_json::Value = serde_json::from_slice(&email_request.body).unwrap();
+
+        // declare closure to find the links in a string
+        let get_link = |s: &str| {
+            let links: Vec<_> = linkify::LinkFinder::new()
+                .links(s)
+                .filter(|l| *l.kind() == linkify::LinkKind::Url)
+                .collect();
+            assert_eq!(links.len(), 2); // confirmation and revocation link!
+            let raw_link = links[1].as_str().to_owned();
+            let mut confirmation_link = reqwest::Url::parse(&raw_link).unwrap();
+            // check that we don't call someone else's API
+            assert_eq!(confirmation_link.host_str().unwrap(), "127.0.0.1");
+            // set the port, only for testing purposes, not needed in production
+            confirmation_link.set_port(Some(self.port)).unwrap();
+            confirmation_link
+        };
+
+        let html = get_link(&request_body["HtmlBody"].as_str().unwrap());
+        let plain_text = get_link(&request_body["TextBody"].as_str().unwrap());
+
+        RevocationLinks { html, plain_text }
     }
 }
 
