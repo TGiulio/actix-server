@@ -31,7 +31,7 @@ pub async fn revoke(
             revoke_subscription(id, &db_pool)
                 .await
                 .context("failed to revoke subscription")?;
-            Ok(HttpResponse::Ok().body("you have correctly unsubscribed"))
+            Ok(HttpResponse::Ok().body("L'iscrizione è stata annullata correttamente"))
         }
     }
 }

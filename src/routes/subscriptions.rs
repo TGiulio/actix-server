@@ -63,9 +63,9 @@ pub async fn send_confirmation_email(
         base_url,
         subscription_token.as_ref()
     );
-    let html_body = format!("Welcome to our mailing list!<br /> Please, click <a href=\"{}\">here</a> to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app!<br /><br />You can unsubscribe at any moment clicking <a href=\"{}\">here</a>", confirmation_link, revocation_link);
+    let html_body = format!("Benvenuto nella nostra mailing list!<br /> Clicca <a href=\"{}\">qui</a> per confermare l'iscrizione, riceverai tutti gli aggiornamenti relativi allo sviluppo di DecisionFlow!<br /><br />Potrai annullare l'iscrizone in ogni momento cliccando <a href=\"{}\">qui</a>", confirmation_link, revocation_link);
     let plain_body = format!(
-        "Welcome to our mailing list! Please, visit this link: {} to confirm your subscription, you will receive all the updates regarding the development of decisionFlow app! \r\r You can unsubscribe at any time visiting this link instead: {}",
+        "Benvenuto nella nostra mailing list! \rVisita il seguente indirizzo per confermare l'iscrizione: {} , riceverai tutti gli aggiornamenti relativi allo sviluppo di DecisionFlow! \r\r Potrai annullare l'iscrizone in ogni momento visitando quest'altro indirizzo: {}",
         confirmation_link, revocation_link
     );
 
@@ -119,7 +119,7 @@ pub async fn subscribe(
     let subscription_token = SubscriptionToken::new();
     store_token(subscriber_id, &subscription_token, &mut sql_transaction)
         .await
-        .context("Failed to store confimration token")?;
+        .context("Failed to store confirmation token")?;
 
     sql_transaction
         .commit()
